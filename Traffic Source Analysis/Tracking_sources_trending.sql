@@ -2,7 +2,7 @@ USE MavenFuzzyFactory
 GO 
 
 /*
-	(tracking source trending)
+	(tracking source trending after some bid changestra)
 	Pull gsearch nonbrand trended session volume by week 
 */	
 
@@ -13,4 +13,4 @@ FROM website_sessions
 WHERE created_at < '2012-05-10'
 	AND utm_source = 'gsearch'
 	AND utm_campaign = 'nonbrand'
-GROUP BY DATEPART(WEEK, created_at)
+GROUP BY YEAR(created_at), DATEPART(WEEK, created_at);
