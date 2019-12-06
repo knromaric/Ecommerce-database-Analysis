@@ -1,4 +1,5 @@
-use mavenfuzzyfactory;
+USE mavenfuzzyfactory;
+GO
 
 SELECT 
 	ws.utm_content
@@ -12,14 +13,15 @@ WHERE ws.website_session_id between 1000 AND 2000
 GROUP BY 
 	utm_content
 ORDER BY sessions DESC;
+GO
 
 -- Finding top traffic sources to the date april 12, 2012
 -- session volume by utm_source, utm_campaign, http_referer
 SELECT utm_source
 	   , utm_campaign
        , http_referer
-       , COUNT(*)  sessions
+       , COUNT(*)  numberOfsessions
 FROM website_sessions
 WHERE created_at < '2012-04-12'
 GROUP BY utm_source, utm_campaign, http_referer
-ORDER BY sessions DESC;
+ORDER BY numberOfsessions DESC;
