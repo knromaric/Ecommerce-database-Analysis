@@ -46,10 +46,10 @@ FROM #session_level_made_it_flag3
 
 SELECT
 	 COUNT(DISTINCT CASE WHEN products_made_it = 1 THEN website_session_id ELSE NULL END)*1.0  / COUNT(DISTINCT website_session_id) AS lander_click_rate
-	, COUNT(DISTINCT CASE WHEN mrfuzzy_made_it = 1 THEN website_session_id ELSE NULL END )*1.0 / COUNT(DISTINCT website_session_id) AS products_click_rate
-	, COUNT(DISTINCT CASE WHEN cart_made_it = 1 THEN website_session_id ELSE NULL END)*1.0 / COUNT(DISTINCT website_session_id) AS mrfuzzy_click_rate
-	, COUNT(DISTINCT CASE WHEN shipping_made_it = 1 THEN website_session_id ELSE NULL END)*1.0 / COUNT(DISTINCT website_session_id) AS cart_click_rate
-	, COUNT(DISTINCT CASE WHEN billing_made_it = 1 THEN website_session_id ELSE NULL END )*1.0 / COUNT(DISTINCT website_session_id) AS shipping_click_rate
-	, COUNT(DISTINCT CASE WHEN thank_you_made_it = 1 THEN website_session_id ELSE NULL END )*1.0 / COUNT(DISTINCT website_session_id) AS billing_click_rate
+	, COUNT(DISTINCT CASE WHEN mrfuzzy_made_it = 1 THEN website_session_id ELSE NULL END )*1.0 / COUNT(DISTINCT CASE WHEN products_made_it = 1 THEN website_session_id ELSE NULL END) AS products_click_rate
+	, COUNT(DISTINCT CASE WHEN cart_made_it = 1 THEN website_session_id ELSE NULL END)*1.0 / COUNT(DISTINCT CASE WHEN mrfuzzy_made_it = 1 THEN website_session_id ELSE NULL END ) AS mrfuzzy_click_rate
+	, COUNT(DISTINCT CASE WHEN shipping_made_it = 1 THEN website_session_id ELSE NULL END)*1.0 / COUNT(DISTINCT CASE WHEN cart_made_it = 1 THEN website_session_id ELSE NULL END) AS cart_click_rate
+	, COUNT(DISTINCT CASE WHEN billing_made_it = 1 THEN website_session_id ELSE NULL END )*1.0 / COUNT(DISTINCT CASE WHEN shipping_made_it = 1 THEN website_session_id ELSE NULL END) AS shipping_click_rate
+	, COUNT(DISTINCT CASE WHEN thank_you_made_it = 1 THEN website_session_id ELSE NULL END )*1.0 / COUNT(DISTINCT CASE WHEN billing_made_it = 1 THEN website_session_id ELSE NULL END ) AS billing_click_rate
 FROM #session_level_made_it_flag3
  
