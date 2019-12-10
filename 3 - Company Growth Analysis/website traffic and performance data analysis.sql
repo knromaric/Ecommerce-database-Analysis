@@ -62,6 +62,31 @@ GROUP BY YEAR(ws.created_at), MONTH(ws.created_at)
 ORDER BY [year], [month];
 GO
 
+--## 4- Montly trends for Gsearch alongside monthly trends for each of our other channels
+	
+--find the different utm sources and referers to see the traffic we're getting 
+
+SELECT DISTINCT	
+	utm_source
+	,utm_campaign
+	,http_referer
+FROM website_sessions
+WHERE created_at <  '2012-11-27';
+GO
+
+SELECT
+	YEAR(created_at) [year]
+	, MONTH(created_at) [month] 
+	, COUNT(DISTINCT CASE WHEN utm_source = 'gsearch' THEN website_session_id ELSE NULL END) gsearch_sessions
+	, COUNT(DISTINCT CASE WHEN utm_source = 'bsearch' THEN website_session_id ELSE NULL END) bsearch_sessions
+	, COUNT(DISTINCT CASE WHEN utm_source IS NULL AND http_referer IS NOT NULL THEN website_session_id ELSE NULL END) organic_search_sessions
+	, COUNT(DISTINCT CASE WHEN utm_source IS NULL AND http_referer IS  NULL THEN website_session_id ELSE NULL END) direct_type_in_sessions
+FROM website_sessions
+WHERE created_at < '2012-11-27'
+GROUP BY YEAR(created_at), MONTH(created_at)
+ORDER BY [year], [month];
+GO
+
 
 
 
