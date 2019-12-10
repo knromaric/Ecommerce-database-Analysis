@@ -252,3 +252,40 @@ GROUP BY CASE
 		ELSE 'check the logic '
 	 END
 GO
+
+
+--###############################################################################################################
+--## 8- quantify the impact of our billing test, as well. analyze the lift generated from the test(sept 10 - nov 10)
+--##    in terms of revenue per billing page session, and then pulll the number of billing sessions forthe past month
+--##    to understand monthly impact 
+--###############################################################################################################
+
+SELECT billing_version_viewed
+	,COUNT(DISTINCT website_session_id) [sessions]
+	,SUM(price_usd) / COUNT(DISTINCT website_session_id) AS revenue_per_billing_page_seen
+FROM (
+SELECT wp.website_session_id
+	,wp.pageview_url AS billing_version_viewed
+	,o.order_id
+	,o.price_usd
+FROM website_pageviews wp
+	LEFT JOIN orders o
+		ON o.website_session_id = wp.website_session_id
+WHERE wp.created_at > '2012-09-10'
+	AND wp.created_at < '2012-11-10'
+	AND wp.pageview_url IN ('/billing', '/billing-2')) billing_pageviews_and_order_data
+GROUP BY billing_version_viewed
+
+-- $22.94 revenue per billing page seen for the old version
+-- $31.38 for the new version
+-- LIFT : $8.44 per billing page view
+
+-- how many session hits the billing in the past month
+SELECT COUNT(DISTINCT wp.website_session_id) billing_sessions_past_month
+FROM website_pageviews wp
+WHERE wp.created_at BETWEEN '2012-10-27' AND  '2012-11-27'
+	AND wp.pageview_url IN ('/billing', '/billing-2')
+
+-- 1137 billing sessions past month
+-- lift: $8.44 per billing session
+-- value of billing test: $9,596 over the past month
