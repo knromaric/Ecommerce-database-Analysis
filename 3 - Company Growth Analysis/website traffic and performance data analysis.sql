@@ -17,6 +17,7 @@ SELECT YEAR(ws.created_at) [year]
 	, MONTH(ws.created_at) [month]
 	, COUNT(DISTINCT ws.website_session_id) [sessions]
 	, COUNT(DISTINCT o.order_id) [orders]
+	, COUNT(DISTINCT o.order_id)*1.0 / COUNT(DISTINCT ws.website_session_id) [sessions_to_orders_rate]
 FROM website_sessions ws
 	LEFT JOIN orders o 
 		ON o.website_session_id = ws.website_session_id
@@ -39,6 +40,24 @@ FROM website_sessions ws
 		ON o.website_session_id = ws.website_session_id
 WHERE  ws.created_at < '2012-11-27'
 	AND utm_source = 'gsearch'
+GROUP BY YEAR(ws.created_at), MONTH(ws.created_at)
+ORDER BY [year], [month];
+GO
+
+--## 3- Let's Dive into nonbrand and pull monthly trend sessions and orders split by device type
+
+SELECT YEAR(ws.created_at) [year]
+	, MONTH(ws.created_at) [month]
+	,  COUNT(DISTINCT CASE WHEN ws.device_type = 'desktop' THEN ws.website_session_id ELSE NULL END) [desktop_sessions]
+	,  COUNT(DISTINCT CASE WHEN ws.device_type = 'desktop' THEN o.order_id ELSE NULL END) [desktop_orders]
+	,  COUNT(DISTINCT CASE WHEN ws.device_type = 'mobile' THEN ws.website_session_id ELSE NULL END) [mobile_sessions]
+	,  COUNT(DISTINCT CASE WHEN ws.device_type = 'mobile' THEN o.order_id ELSE NULL END) [mobile_orders]
+FROM website_sessions ws 
+	LEFT JOIN orders o 
+		ON o.website_session_id = ws.website_session_id
+WHERE ws.created_at < '2012-11-27'
+	AND utm_source = 'gsearch'
+	AND utm_campaign = 'nonbrand'
 GROUP BY YEAR(ws.created_at), MONTH(ws.created_at)
 ORDER BY [year], [month];
 GO
