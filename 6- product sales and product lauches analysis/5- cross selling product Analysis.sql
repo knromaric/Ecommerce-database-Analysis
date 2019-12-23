@@ -8,53 +8,77 @@ GO
 		pull CTR from the /cart page, AVG products per order, AOV, and overall revenue per /cart page view
 ===================================================================================================================*/
 
--- 1- retrieve all session that reach the cart page 
-SELECT website_session_id
-	, website_pageview_id
-	, pageview_url cart_page_seen
-INTO #session_seing_cart_pages
-FROM website_pageviews
-WHERE created_at < '20131025'
-	AND created_at > '20130825'
-	AND pageview_url = '/cart'
-GO
--- 2- add flag with shipping page to evaluate the clickthrough
+-- 1: retrieve the relevant /cart page views and their sessions
 SELECT
 	CASE 
-		WHEN created_at <'20130925' THEN 'A. Precross_sell'
-		WHEN created_at >='20130925' THEN 'B. PostCross_sell'
-		ELSE 'uh oh... check logic'
+		WHEN created_at < '2013-09-25' THEN 'A. Pre_Cross_Sell'
+		WHEN created_at >= '2013-01-06' THEN 'B. Post_Cross_Sell'
+		ELSE 'uh oh...check logic'
 	END time_period
-	,website_session_id
-	,MAX(shipping_page) shipping_made_it
-	,MAX(billing_page) billing_made_it
-	,MAX(thankyou_page) thankyou_made_it
-into #session_product_level_made_it_flag
-FROM 
-	(SELECT wp.created_at
-		, wp.website_session_id
-		, CASE WHEN pageview_url = '/shipping' THEN 1 ELSE 0 END shipping_page
-		, CASE WHEN pageview_url = '/billing-2' THEN 1 ELSE 0 END billing_page
-		, CASE WHEN pageview_url = '/thank-you-for-your-order' THEN 1 ELSE 0 END AS thankyou_page
-	FROM #session_seing_cart_pages scpg
-		LEFT JOIN website_pageviews wp
-			ON wp.website_session_id = scpg.website_session_id
-				AND wp.website_pageview_id > scpg.website_pageview_id) session_w_flag
-GROUP BY CASE 
-		WHEN created_at <'20130925' THEN 'A. Precross_sell'
-		WHEN created_at >='20130925' THEN 'B. PostCross_sell'
-		ELSE 'uh oh... check logic'
-	END 
-	,website_session_id;
+	,website_session_id AS cart_session_id
+	,website_pageview_id AS car_pageview_id 
+INTO #sessions_seeing_cart
+FROM website_pageviews
+WHERE created_at BETWEEN '2013-08-25' AND '2013-10-25'
+	AND pageview_url = '/cart';
+GO
+
+-- 2: see which of those /cart sessions clicked through to the shipping page
+SELECT 
+	ssc.time_period,
+	ssc.cart_session_id,
+	MIN(wp.website_pageview_id) AS pv_id_after_cart
+INTO #cart_sessions_seeing_another_page
+from #sessions_seeing_cart ssc
+	LEFT JOIN website_pageviews wp
+		ON wp.website_session_id= ssc.cart_session_id
+			AND wp.website_pageview_id > ssc.car_pageview_id
+GROUP BY 
+	ssc.time_period,
+	ssc.cart_session_id
+HAVING 
+	MIN(wp.website_pageview_id) IS NOT NULL;
+GO
+
+-- 3: Find the orders associated with the /cart sessions. Analyze products purchased, AOV
+SELECT 
+	time_period
+	, cart_session_id
+	, order_id
+	, items_purchased
+	,price_usd
+INTO #pre_post_sessions_orders
+FROM #sessions_seeing_cart
+	INNER JOIN orders
+		ON #sessions_seeing_cart.cart_session_id = orders.website_session_id
+GO		
 
 
--- 3- join with order and order item to bring pro
-
-SELECT time_period
-	,COUNT(Distinct splf.website_session_id) cart_sessions
-	,AVG(o.price_usd) aov
-	,SUM(o.price_usd - o.cogs_usd) / COUNT(Distinct splf.website_session_id) rev_per_cart_sessions
-FROM #session_product_level_made_it_flag splf
-	LEFT JOIN orders o
-		ON o.website_session_id = splf.website_session_id
-GROUP BY time_period;
+-- 4: Aggregate and Analyze a summary of our findings
+SELECT 
+	time_period
+	,COUNT(DISTINCT cart_session_id) AS cart_sessions
+	,SUM(clicked_to_another_page) AS clickthroughs
+	,SUM(clicked_to_another_page)*1.0 / COUNT(DISTINCT cart_session_id) AS cart_ctr
+	,SUM(placed_order) AS orders_placed
+	,SUM(items_purchased) AS products_purchased
+	,SUM(items_purchased)*1.0/SUM(placed_order) AS Product_per_order
+	,SUM(price_usd) AS revenue
+	,SUM(price_usd)/SUM(placed_order) AS aov
+	,SUM(price_usd)/ COUNT(DISTINCT cart_session_id) AS rev_per_cart_session
+FROM
+	(
+	SELECT 
+		ssc.time_period
+		,ssc.cart_session_id
+		,CASE WHEN ssap.cart_session_id IS NULL THEN 0 ELSE 1 END AS clicked_to_another_page
+		,CASE WHEN ppso.order_id IS NULL THEN 0 ELSE 1 END AS placed_order
+		,ppso.items_purchased
+		,ppso.price_usd
+	FROM #sessions_seeing_cart ssc
+		LEFT JOIN #cart_sessions_seeing_another_page ssap
+			ON ssc.cart_session_id = ssap.cart_session_id
+		LEFT JOIN #pre_post_sessions_orders ppso
+			ON ppso.cart_session_id = ssc.cart_session_id) AS full_data
+GROUP BY time_period
+GO
